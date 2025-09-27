@@ -1,4 +1,5 @@
 pip install -q ultralytics
+
 import streamlit as st
 from ultralytics import YOLO
 from PIL import Image
