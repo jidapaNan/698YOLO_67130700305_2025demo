@@ -2,14 +2,12 @@ import streamlit as st
 from ultralytics import YOLO
 from PIL import Image
 import numpy as np
-import io
 
 st.title("YOLO Image Detection App :)")
 
-# โหลดโมเดลครั้งเดียวด้วย cache (เร็วและประหยัดทรัพยากร)
 @st.cache_resource
 def load_model():
-    return YOLO("best.pt")   # ใส่ path ให้ถูกกับไฟล์จริงใน repo
+    return YOLO("best.pt")   # ใส่ path ให้ถูกต้อง
 model = load_model()
 
 uploaded = st.file_uploader(
@@ -18,11 +16,10 @@ uploaded = st.file_uploader(
 
 if uploaded is not None:
     try:
-        # อ่านเป็น bytes แล้วค่อยเปิดด้วย PIL (กัน pointer เพี้ยน/อ่านซ้ำ)
-        img_bytes = uploaded.read()
-        image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        # เปิดไฟล์ภาพตรง ๆ ด้วย PIL
+        image = Image.open(uploaded).convert("RGB")
 
-        # แสดงภาพต้นฉบับ (ส่งเป็น PIL/bytes ก็ได้)
+        # แสดงภาพต้นฉบับ
         st.image(image, caption="Uploaded Image", use_container_width=True)
 
         # แปลงเป็น numpy array เพื่อส่งเข้า YOLO
@@ -32,19 +29,18 @@ if uploaded is not None:
         results = model.predict(image_np, conf=0.4)
 
         # วาดผลลัพธ์บนภาพ
-        result_bgr = results[0].plot()      # BGR (จาก ultralytics)
-        result_rgb = result_bgr[:, :, ::-1] # แปลงเป็น RGB เพื่อแสดงบน Streamlit
+        result_bgr = results[0].plot()
+        result_rgb = result_bgr[:, :, ::-1]  # BGR → RGB
         st.image(result_rgb, caption="YOLO Detection Result", use_container_width=True)
         st.success("Detection completed!")
 
-        # ดึงผลกล่องและนับคลาสที่ต้องการ
+        # ดึงผลลัพธ์กล่อง
         boxes = results[0].boxes
         class_ids = boxes.cls.cpu().numpy().astype(int)
         class_names = [model.names[i] for i in class_ids]
 
-        # เปลี่ยนชื่อให้ตรงกับที่คุณ train จริง ๆ เช่น 'LicensePlate' หรือ 'license_plate'
-        lp_label = "LicensePlate"
-        lp_count = sum(1 for n in class_names if n == lp_label)
+        lp_label = "LicensePlate"   # ชื่อ class ต้องตรงกับที่คุณ train
+        lp_count = class_names.count(lp_label)
         st.write(f"Number of license plate detected: **{lp_count}**")
 
     except Exception as e:
